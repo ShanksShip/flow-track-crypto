@@ -1,87 +1,117 @@
-# Binance资金流向分析工具
+# Flow Track Crypto
 
-## 项目简介
+A modern web application for tracking and analyzing funding flows on Binance cryptocurrency markets. This tool helps traders and analysts identify market trends, detect anomalies, and make more informed trading decisions.
 
-这是一个专业的加密货币资金流向分析工具，主要通过分析Binance交易所的现货和期货市场数据，提供深度的市场洞察和交易策略建议。该工具结合K线数据、订单簿深度和DeepSeek AI模型，为交易者提供全面的市场分析。
+## Features
 
-## 主要功能
+- **Funding Flow Trend Analysis**: Track capital movement in spot and futures markets
+- **Market Stage Detection**: Identify whether markets are in accumulation, distribution, or trending phases
+- **Anomaly Detection**: Spot unusual trading activity that may signal price movements
+- **Order Book Analysis**: Analyze buying and selling pressure
+- **Cross-Market Comparison**: Compare spot vs futures markets to identify divergences
+- **Multi-Timeframe Support**: Analyze data across various timeframes (5m, 15m, 30m, 1h, 4h, 1d)
 
-1. **资金流向分析**
-   - 分析现货和期货市场的资金流入/流出趋势
-   - 识别主力资金的建仓、出货行为
-   - 对比不同交易对的资金流向差异
+## Live Demo
 
-2. **市场阶段判断**
-   - 自动判断市场所处阶段（顶部、底部、上涨中、下跌中、整理中）
-   - 提供判断的置信度和具体依据
-   - 分析不同交易对之间可能存在的轮动关系
+The application is deployed on Vercel and can be accessed at [https://flow-track-crypto.vercel.app](https://flow-track-crypto.vercel.app)
 
-3. **订单簿深度分析**
-   - 计算买卖盘不平衡度
-   - 分析关键价格区间内的买卖盘压力
-   - 结合资金流向评估市场压力方向和强度
+## Screenshots
 
-4. **异常交易检测**
-   - 识别成交量异常但价格变化不大的情况
-   - 检测价格异常波动但成交量不高的情况
-   - 发现极端资金净流入/流出的异常交易
+![Flow Track Crypto Screenshot](public/screenshot.png)
 
-5. **AI驱动的专业分析**
-   - 通过DeepSeek API提供专业交易员视角的市场解读
-   - 生成短期趋势预判和交易策略建议
-   - 输出结构化的markdown格式分析报告
+## Technology Stack
 
-## 技术特点
+- **Frontend Framework**: Next.js 14 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Shadcn UI
+- **API Integration**: Direct Binance API calls from the client
+- **Charts**: Recharts
+- **Deployment**: Vercel
 
-- **多维度数据采集**：同时分析现货和期货市场数据，提供更全面的市场视角
-- **高级统计分析**：使用相关性分析、线性回归等方法挖掘市场趋势
-- **领先/滞后关系分析**：研究资金流向与价格变化之间的时间关系
-- **异常值检测**：使用统计方法识别可能的市场操纵行为
-- **API速率限制处理**：内置请求限流机制，确保稳定运行
+## Getting Started
 
-## 使用方法
+### Prerequisites
 
-1. **配置API密钥**
-   - 设置Binance API密钥和密钥（`BINANCE_API_KEY`和`BINANCE_API_SECRET`）
-   - 设置DeepSeek API密钥（`DEEPSEEK_API_KEY`）
+- Node.js 18.x or higher
+- npm or yarn
 
-2. **设置监控交易对**
-   - 在`SYMBOLS`列表中添加或修改需要监控的交易对
+### Installation
 
-3. **运行分析**
-   ```
-   python binance_funding_flow_analyzer.py
-   ```
-
-4. **查看结果**
-   - 分析结果将输出到控制台
-   - 同时保存为markdown文件（`binance_analysis.md`）
-
-## 系统要求
-
-- Python 3.7+
-- 依赖库：requests, pandas, numpy, scipy, binance-python, telegram, ratelimit
-
-## 安装依赖
-
+1. Clone the repository
 ```bash
-pip install requests pandas numpy scipy python-binance python-telegram-bot ratelimit
+git clone https://github.com/yourusername/flow-track-crypto.git
+cd flow-track-crypto
 ```
 
-## 注意事项
+2. Install dependencies
+```bash
+npm install
+# or
+yarn install
+```
 
-1. 确保Binance API密钥具有读取权限（无需交易权限）
-2. 分析结果仅供参考，不构成投资建议
-3. 请遵守Binance API使用条款，避免过于频繁的请求
-4. DeepSeek API调用会产生费用，请合理使用
+3. Start the development server
+```bash
+npm run dev
+# or
+yarn dev
+```
 
-## 未来计划
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application
 
-- 添加更多交易所数据源
-- 实现自动交易策略执行
-- 开发Web界面展示分析结果
-- 增加更多技术指标和分析维度
+### Building for Production
 
-## 免责声明
+```bash
+npm run build
+# or
+yarn build
+```
 
-本工具仅供学习和研究目的使用，不构成任何投资建议。加密货币市场风险高，请谨慎投资。作者不对使用本工具产生的任何投资损失负责。
+## How It Works
+
+The application directly fetches data from Binance's public API endpoints:
+
+1. **Kline (Candlestick) Data**: Retrieves historical price and volume data for both spot and futures markets
+2. **Order Book Data**: Analyzes the current buy and sell orders to calculate market pressure
+3. **Analysis Algorithms**: Processes the raw data to detect trends, anomalies, and market stages
+4. **User Interface**: Presents the analyzed data in an intuitive, interactive interface
+
+## Architecture
+
+The application follows a clean, modular architecture:
+
+- `/src/app`: Next.js app router pages
+- `/src/components`: React components, separated by feature and function
+- `/src/lib`: Utility functions, API clients, and analysis algorithms
+- `/src/types`: TypeScript type definitions
+- `/src/hooks`: Custom React hooks
+
+## API Integration
+
+The application directly communicates with Binance's public API endpoints:
+
+- Spot market: `https://api.binance.com`
+- Futures market: `https://fapi.binance.com`
+
+All API requests include retry logic and rate limiting protection to ensure reliability.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Binance API for providing the market data
+- Shadcn UI for the beautiful UI components
+- The Next.js team for the amazing framework
