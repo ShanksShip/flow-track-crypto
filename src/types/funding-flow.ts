@@ -11,6 +11,8 @@ export interface Kline {
   quoteVolume: number
   buyVolume: number
   sellVolume: number
+  takerBuyBaseVolume: number
+  takerBuyQuoteVolume: number
   netInflow: number
   priceChangePct: number
 }
@@ -44,6 +46,21 @@ export interface FundingTrendAnalysis {
   netInflowTotal: number
   netInflowRecent: number
   priceStage: string
+  reasons?: string[]
+  metrics?: {
+    priceTrend: number
+    priceTrendDirection: string
+    priceTrendStrength: number
+    priceTrendPValue: number
+    inflowTrend: number
+    inflowTrendDirection: string
+    inflowTrendStrength: number
+    inflowTrendPValue: number
+    correlation: number
+    inflowVolumeCorrelation: number
+    priceVolatility: number
+    recentInflowTrend: number
+  }
 }
 
 export interface Anomaly {
@@ -62,6 +79,13 @@ export interface Anomaly {
     volumeZScore: number
   }
   time: string
+  type?:
+    | "high_volume_low_price_change"
+    | "high_price_change_low_volume"
+    | "extreme_net_inflow"
+    | "extreme_net_outflow"
+  inflowRatio?: number
+  outflowRatio?: number
 }
 
 export interface AnomalyDetection {
@@ -82,6 +106,13 @@ export interface FundingPressureAnalysis {
   confidence: number
   imbalance: number
   bidAskRatio: number
+  metrics?: {
+    avgInflowRatio: number
+    volumeImbalance: number
+    valueImbalance: number
+    nearVolumeImbalance: number
+    pressureScore: number
+  }
 }
 
 export interface KlinesSummary {

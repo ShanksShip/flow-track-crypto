@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { format } from "date-fns"
 import { Interval, AnalysisResult } from "@/types/funding-flow"
 import { getKlinesData, getOrderBookStats, getAIAnalysis } from "@/lib/api"
 import {
@@ -9,7 +8,6 @@ import {
   detectAnomalies,
   analyzeFundingPressure,
 } from "@/lib/analysis"
-import { formatNumber } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -304,7 +302,7 @@ export function FundingFlowAnalyzer() {
               <label className="text-sm font-medium">添加交易对</label>
               <div className="flex gap-2">
                 <Input
-                  placeholder="输入交易对（例如：BTCUSDT）"
+                  placeholder="输入交易对(例如: BTCUSDT)"
                   value={newSymbol}
                   onChange={(e) => setNewSymbol(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -385,7 +383,7 @@ export function FundingFlowAnalyzer() {
                   <p className="text-xs text-muted-foreground">
                     你的 API
                     密钥、接口地址和模型名称将保存在本地浏览器中，不会发送到我们的服务器。
-                    默认使用 DeepSeek，也可以设置为其他支持类似格式的 AI 服务。
+                    默认使用 DeepSeek, 也可以设置为其他支持类似格式的 AI 服务。
                   </p>
                 </div>
               )}

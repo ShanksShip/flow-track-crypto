@@ -10,12 +10,13 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatNumber(num: number): string {
   if (typeof num !== "number") return String(num)
+  return formatNumberWithCommas(num)
+}
 
-  if (Math.abs(num) >= 1000) {
-    return num.toFixed(2)
-  } else if (Math.abs(num) >= 1) {
-    return num.toFixed(4)
-  } else {
-    return num.toFixed(8)
-  }
+export function formatNumberWithCommas(num: number): string {
+  return num.toLocaleString("en-US", {
+    style: "decimal",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }

@@ -8,147 +8,335 @@ import {
 } from "@/types/funding-flow"
 
 /**
- * Analyze funding flow trend
+ * 线性回归计算
+ * 模拟 Python中的stats.linregress 函数
  */
-export function analyzeFundingFlowTrend(
-  klinesData: Kline[],
-  windowSize: number = 10
-): FundingTrendAnalysis {
-  if (!klinesData || klinesData.length < windowSize) {
+function linearRegression(
+  x: number[],
+  y: number[]
+): {
+  slope: number
+  intercept: number
+  rValue: number
+  pValue: number
+  stdErr: number
+} {
+  const n = x.length
+  if (n !== y.length || n === 0) {
+    return {
+      slope: 0,
+      intercept: 0,
+      rValue: 0,
+      pValue: 0,
+      stdErr: 0,
+    }
+  }
+
+  // 计算平均值
+  const xMean = x.reduce((sum, val) => sum + val, 0) / n
+  const yMean = y.reduce((sum, val) => sum + val, 0) / n
+
+  // 计算各种总和
+  let xxSum = 0,
+    yySum = 0,
+    xySum = 0
+  for (let i = 0; i < n; i++) {
+    const xDiff = x[i] - xMean
+    const yDiff = y[i] - yMean
+    xxSum += xDiff * xDiff
+    yySum += yDiff * yDiff
+    xySum += xDiff * yDiff
+  }
+
+  // 计算斜率和截距
+  const slope = xxSum === 0 ? 0 : xySum / xxSum
+  const intercept = yMean - slope * xMean
+
+  // 计算相关系数r
+  const rValue =
+    Math.sqrt(xxSum * yySum) === 0 ? 0 : xySum / Math.sqrt(xxSum * yySum)
+
+  // 简化的 p 值和标准误差计算（实际上需要t分布等更复杂的计算）
+  const pValue = 0 // 简化，实际计算较复杂
+  const stdErr = 0 // 简化，实际计算较复杂
+
+  return { slope, intercept, rValue, pValue, stdErr }
+}
+
+/**
+ * 计算两个数组的相关系数
+ * 模拟 Python 中的 np.corrcoef 函数
+ */
+function correlationCoefficient(x: number[], y: number[]): number {
+  const n = x.length
+  if (n !== y.length || n === 0) {
+    return 0
+  }
+
+  // 计算平均值
+  const xMean = x.reduce((sum, val) => sum + val, 0) / n
+  const yMean = y.reduce((sum, val) => sum + val, 0) / n
+
+  // 计算分子和分母
+  let numerator = 0
+  let xDenominator = 0
+  let yDenominator = 0
+
+  for (let i = 0; i < n; i++) {
+    const xDiff = x[i] - xMean
+    const yDiff = y[i] - yMean
+    numerator += xDiff * yDiff
+    xDenominator += xDiff * xDiff
+    yDenominator += yDiff * yDiff
+  }
+
+  // 计算相关系数
+  return Math.sqrt(xDenominator * yDenominator) === 0
+    ? 0
+    : numerator / Math.sqrt(xDenominator * yDenominator)
+}
+
+/**
+ * 计算标准差
+ * 模拟Python中的np.std函数
+ */
+function standardDeviation(values: number[]): number {
+  const n = values.length
+  if (n === 0) return 0
+
+  const mean = values.reduce((sum, val) => sum + val, 0) / n
+  const variance =
+    values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / n
+  return Math.sqrt(variance)
+}
+
+/**
+ * 按照 Python 代码分析资金流向趋势
+ */
+export function analyzeFundingFlowTrend(klinesData: Kline[]): FundingTrendAnalysis {
+  if (!klinesData || klinesData.length < 10) {
     return {
       trend: "unknown",
       confidence: 0,
       netInflowTotal: 0,
       netInflowRecent: 0,
-      priceStage: "unknown",
+      priceStage: "数据不足，无法分析",
     }
   }
 
-  // Calculate total net inflow
-  const netInflowTotal = klinesData.reduce((sum, k) => sum + k.netInflow, 0)
+  // 按照时间排序 (假设已排序)
+  const sortedData = [...klinesData]
 
-  // Calculate recent window net inflow
-  const netInflowRecent = klinesData
-    .slice(-windowSize)
-    .reduce((sum, k) => sum + k.netInflow, 0)
+  // 提取价格和资金流向数据
+  const prices = sortedData.map((k) => k.close)
+  const netInflows = sortedData.map((k) => k.netInflow)
+  const volumes = sortedData.map((k) => k.quoteVolume)
 
-  // Calculate the moving average of net inflows
-  const windowInflows: number[] = []
-  for (let i = 0; i <= klinesData.length - windowSize; i++) {
-    const windowInflow = klinesData
-      .slice(i, i + windowSize)
-      .reduce((sum, k) => sum + k.netInflow, 0)
-    windowInflows.push(windowInflow)
+  // 计算总净流入
+  const netInflowTotal = netInflows.reduce((sum, inflow) => sum + inflow, 0)
+
+  // 计算最近的净流入 (最后10个周期)
+  const netInflowRecent = netInflows
+    .slice(-10)
+    .reduce((sum, inflow) => sum + inflow, 0)
+
+  // 计算价格趋势
+  const priceChanges = []
+  for (let i = 1; i < prices.length; i++) {
+    priceChanges.push(prices[i] - prices[i - 1])
   }
+  const priceTrend =
+    priceChanges.filter((change) => change > 0).length / priceChanges.length
 
-  // Determine trend
-  let trend: FundingTrendAnalysis["trend"] = "neutral"
-  if (windowInflows.length >= 3) {
-    const recentInflows = windowInflows.slice(-3)
+  // 计算资金流向趋势
+  const inflowChanges = []
+  for (let i = 1; i < netInflows.length; i++) {
+    inflowChanges.push(netInflows[i] - netInflows[i - 1])
+  }
+  const inflowTrend =
+    inflowChanges.filter((change) => change > 0).length / inflowChanges.length
 
-    if (
-      recentInflows.every((x) => x > 0) &&
-      recentInflows[2] > recentInflows[1]
-    ) {
-      trend = "increasing"
-    } else if (
-      recentInflows.every((x) => x < 0) &&
-      recentInflows[2] < recentInflows[1]
-    ) {
-      trend = "decreasing"
-    } else if (recentInflows.filter((x) => x > 0).length >= 2) {
-      trend = "slightly_increasing"
-    } else if (recentInflows.filter((x) => x < 0).length >= 2) {
-      trend = "slightly_decreasing"
+  // 计算成交量趋势
+  const volumeChanges = []
+  for (let i = 1; i < volumes.length; i++) {
+    volumeChanges.push(volumes[i] - volumes[i - 1])
+  }
+  const volumeTrend =
+    volumeChanges.filter((change) => change > 0).length / volumeChanges.length
+
+  // 计算价格与资金流向的相关性
+  const correlation = correlationCoefficient(prices, netInflows)
+
+  // 计算资金流向与成交量的相关性
+  const inflowVolumeCorr = correlationCoefficient(netInflows, volumes)
+
+  // 计算价格波动率
+  const priceVolatility =
+    prices.length > 0 &&
+    Math.abs(prices.reduce((sum, p) => sum + p, 0) / prices.length) > 0
+      ? standardDeviation(priceChanges) /
+        (prices.reduce((sum, p) => sum + p, 0) / prices.length)
+      : 0
+
+  // 使用线性回归分析价格趋势
+  const x = Array.from({ length: prices.length }, (_, i) => i)
+  const priceRegression = linearRegression(x, prices)
+  const priceTrendStrength = Math.abs(priceRegression.rValue)
+  const priceTrendDirection = priceRegression.slope > 0 ? "up" : "down"
+
+  // 使用线性回归分析资金流向趋势
+  const inflowRegression = linearRegression(x, netInflows)
+  const inflowTrendStrength = Math.abs(inflowRegression.rValue)
+  const inflowTrendDirection =
+    inflowRegression.slope > 0 ? "increasing" : "decreasing"
+
+  // 分析最近的资金流向变化
+  const recentInflows = netInflows.slice(-10)
+  let recentInflowTrend = 0
+  if (recentInflows.length > 1) {
+    let increasingCount = 0
+    for (let i = 1; i < recentInflows.length; i++) {
+      if (recentInflows[i] > recentInflows[i - 1]) {
+        increasingCount++
+      }
     }
+    recentInflowTrend = increasingCount / (recentInflows.length - 1)
   }
 
-  // Calculate confidence
-  let confidence = 0.4 // Default for neutral
-  if (trend === "increasing" || trend === "decreasing") {
-    confidence = 0.8
-  } else if (
-    trend === "slightly_increasing" ||
-    trend === "slightly_decreasing"
-  ) {
-    confidence = 0.6
+  // 根据各种指标判断价格所处阶段
+  let stage = "unknown"
+  let confidence = 0
+  let reasons: string[] = []
+
+  // 顶部特征
+  if (priceTrend > 0.7 && inflowTrend < 0.3 && correlation < -0.3) {
+    stage = "顶部"
+    confidence = Math.min(0.7 + priceTrend - inflowTrend - correlation, 0.95)
+    reasons = [
+      "价格持续上涨但资金流入减少",
+      "价格与资金流向呈负相关",
+      `价格趋势强度: ${priceTrendStrength.toFixed(
+        2
+      )}, 资金流向趋势强度: ${inflowTrendStrength.toFixed(2)}`,
+    ]
   }
-
-  // Determine price stage
-  let priceStage = "unknown"
-  if (klinesData.length >= 20) {
-    const recentPrices = klinesData.slice(-20).map((k) => k.close)
-    const priceChanges = recentPrices
-      .slice(1)
-      .map((price, i) => price - recentPrices[i])
-
-    // Calculate price moving average
-    const priceMA =
-      recentPrices.reduce((sum, price) => sum + price, 0) / recentPrices.length
-    const latestPrice = recentPrices[recentPrices.length - 1]
-
-    // Calculate price volatility (standard deviation)
-    const priceMean =
-      priceChanges.reduce((sum, change) => sum + change, 0) /
-      priceChanges.length
-    const priceVariance =
-      priceChanges.reduce(
-        (sum, change) => sum + Math.pow(change - priceMean, 2),
-        0
-      ) / priceChanges.length
-    const priceStdDev = Math.sqrt(priceVariance)
-
-    const priceVolatility = priceMA > 0 ? priceStdDev / priceMA : 0
-
-    // Determine price stage based on price relation to MA and trend
-    if (
-      latestPrice > priceMA * 1.05 &&
-      (trend === "increasing" || trend === "slightly_increasing")
-    ) {
-      priceStage = "上涨中"
-    } else if (
-      latestPrice < priceMA * 0.95 &&
-      (trend === "decreasing" || trend === "slightly_decreasing")
-    ) {
-      priceStage = "下跌中"
-    } else if (
-      priceVolatility < 0.01 &&
-      Math.abs(latestPrice - priceMA) / priceMA < 0.02
-    ) {
-      priceStage = "整理中"
-    } else if (
-      latestPrice > priceMA * 1.08 &&
-      (trend === "decreasing" || trend === "slightly_decreasing")
-    ) {
-      priceStage = "可能顶部"
-    } else if (
-      latestPrice < priceMA * 0.92 &&
-      (trend === "increasing" || trend === "slightly_increasing")
-    ) {
-      priceStage = "可能底部"
+  // 底部特征
+  else if (priceTrend < 0.3 && inflowTrend > 0.7 && correlation < -0.3) {
+    stage = "底部"
+    confidence = Math.min(0.7 - priceTrend + inflowTrend - correlation, 0.95)
+    reasons = [
+      "价格持续下跌但资金流入增加",
+      "价格与资金流向呈负相关",
+      `价格趋势强度: ${priceTrendStrength.toFixed(
+        2
+      )}, 资金流向趋势强度: ${inflowTrendStrength.toFixed(2)}`,
+    ]
+  }
+  // 上涨中特征
+  else if (priceTrend > 0.6 && inflowTrend > 0.6 && correlation > 0.3) {
+    stage = "上涨中"
+    confidence = Math.min(priceTrend + inflowTrend + correlation - 1.0, 0.95)
+    reasons = [
+      "价格与资金流入同步增加",
+      "价格与资金流向呈正相关",
+      `价格趋势强度: ${priceTrendStrength.toFixed(
+        2
+      )}, 资金流向趋势强度: ${inflowTrendStrength.toFixed(2)}`,
+    ]
+  }
+  // 下跌中特征
+  else if (priceTrend < 0.4 && inflowTrend < 0.4 && correlation > 0.3) {
+    stage = "下跌中"
+    confidence = Math.min(1.0 - priceTrend - inflowTrend + correlation, 0.95)
+    reasons = [
+      "价格与资金流入同步减少",
+      "价格与资金流向呈正相关",
+      `价格趋势强度: ${priceTrendStrength.toFixed(
+        2
+      )}, 资金流向趋势强度: ${inflowTrendStrength.toFixed(2)}`,
+    ]
+  }
+  // 整理阶段特征
+  else if (Math.abs(priceTrend - 0.5) < 0.15 && priceVolatility < 0.01) {
+    stage = "整理中"
+    confidence = 0.5 + (0.15 - Math.abs(priceTrend - 0.5)) * 3
+    reasons = [
+      "价格波动率低",
+      "无明显趋势",
+      `价格波动率: ${priceVolatility.toFixed(4)}`,
+    ]
+  }
+  // 其他情况，根据趋势强度判断
+  else {
+    if (priceTrend > 0.5) {
+      if (inflowTrend > 0.5) {
+        stage = "上涨中"
+        confidence = (priceTrend + inflowTrend) / 2
+        reasons = ["价格和资金流向均呈上升趋势"]
+      } else {
+        stage = "减弱上涨"
+        confidence = priceTrend * (1 - inflowTrend)
+        reasons = ["价格上升但资金流向减弱"]
+      }
     } else {
-      priceStage = "波动中"
+      if (inflowTrend < 0.5) {
+        stage = "下跌中"
+        confidence = (1 - priceTrend + 1 - inflowTrend) / 2
+        reasons = ["价格和资金流向均呈下降趋势"]
+      } else {
+        stage = "减弱下跌"
+        confidence = (1 - priceTrend) * inflowTrend
+        reasons = ["价格下降但资金流向增强"]
+      }
     }
   }
 
+  // 确定资金流向趋势方向
+  let trend: FundingTrendAnalysis["trend"] = "neutral"
+  if (inflowTrendDirection === "increasing" && inflowTrendStrength > 0.5) {
+    trend = "increasing"
+  } else if (inflowTrendDirection === "increasing" && inflowTrendStrength > 0.3) {
+    trend = "slightly_increasing"
+  } else if (inflowTrendDirection === "decreasing" && inflowTrendStrength > 0.5) {
+    trend = "decreasing"
+  } else if (
+    inflowTrendDirection === "decreasing" &&
+    inflowTrendStrength > 0.3
+  ) {
+    trend = "slightly_decreasing"
+  }
+
+  // 返回结果，包含详细信息
   return {
     trend,
     confidence,
     netInflowTotal,
     netInflowRecent,
-    priceStage,
-  }
+    priceStage: stage,
+    reasons, // 添加到类型定义中
+    metrics: {
+      // 添加到类型定义中
+      priceTrend,
+      priceTrendDirection,
+      priceTrendStrength,
+      priceTrendPValue: priceRegression.pValue,
+      inflowTrend,
+      inflowTrendDirection,
+      inflowTrendStrength,
+      inflowTrendPValue: inflowRegression.pValue,
+      correlation,
+      inflowVolumeCorrelation: inflowVolumeCorr,
+      priceVolatility,
+      recentInflowTrend,
+    },
+  } as FundingTrendAnalysis
 }
 
 /**
- * Detect anomalies in trading data
+ * 按照 Python 代码检测资金流向和价格变动的异常
  */
-export function detectAnomalies(
-  klinesData: Kline[],
-  windowSize: number = 10,
-  threshold: number = 2.0
-): AnomalyDetection {
-  if (!klinesData || klinesData.length < windowSize * 2) {
+export function detectAnomalies(klinesData: Kline[]): AnomalyDetection {
+  if (!klinesData || klinesData.length < 5) {
     return {
       hasAnomalies: false,
       anomalies: [],
@@ -157,78 +345,99 @@ export function detectAnomalies(
 
   const anomalies: Anomaly[] = []
 
-  // Calculate volume and net inflow statistics
-  const volumes = klinesData.map((k) => k.volume)
-  const inflows = klinesData.map((k) => k.netInflow)
+  // 按时间排序 (假设已排序)
+  const sortedData = [...klinesData]
 
-  // Calculate mean and standard deviation
-  const volumeMean = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length
-  const inflowMean =
-    inflows.reduce((sum, inflow) => sum + inflow, 0) / inflows.length
+  // 计算成交量和价格变化的均值和标准差
+  const volumes = sortedData.map((k) => k.quoteVolume)
+  const priceChanges = sortedData.map(
+    (k, i) => Math.abs(k.close - k.open) / k.open
+  )
 
-  // Calculate standard deviations
-  const volumeVariance =
-    volumes.reduce((sum, vol) => sum + Math.pow(vol - volumeMean, 2), 0) /
-    volumes.length
-  const inflowVariance =
-    inflows.reduce((sum, inflow) => sum + Math.pow(inflow - inflowMean, 2), 0) /
-    inflows.length
+  const volMean = volumes.reduce((sum, vol) => sum + vol, 0) / volumes.length
+  const volStd = standardDeviation(volumes)
+  const priceChangeMean =
+    priceChanges.reduce((sum, change) => sum + change, 0) / priceChanges.length
+  const priceChangeStd = standardDeviation(priceChanges)
 
-  const volumeStdDev = Math.sqrt(volumeVariance)
-  const inflowStdDev = Math.sqrt(inflowVariance)
+  // 检测异常
+  for (let i = 0; i < sortedData.length; i++) {
+    const k = sortedData[i]
+    const priceChange = priceChanges[i]
 
-  // Check each kline for anomalies
-  klinesData.forEach((kline, i) => {
-    const anomaly: Partial<Anomaly> = {}
-
-    // Detect volume anomalies
-    const volumeZScore =
-      volumeStdDev > 0 ? (kline.volume - volumeMean) / volumeStdDev : 0
-    if (Math.abs(volumeZScore) > threshold) {
-      anomaly.volume = {
-        value: kline.volume,
-        zScore: volumeZScore,
-        direction: volumeZScore > 0 ? "high" : "low",
+    // 成交量异常高但价格变化不大
+    if (
+      k.quoteVolume > volMean + 2 * volStd &&
+      priceChange < priceChangeMean + 0.5 * priceChangeStd
+    ) {
+      const anomaly: Partial<Anomaly> = {
+        time: k.openTime,
+        volume: {
+          value: k.quoteVolume,
+          zScore: (k.quoteVolume - volMean) / (volStd || 1),
+          direction: "high",
+        },
+        type: "high_volume_low_price_change",
       }
+      anomalies.push(anomaly as Anomaly)
     }
 
-    // Detect net inflow anomalies
-    const inflowZScore =
-      inflowStdDev > 0 ? (kline.netInflow - inflowMean) / inflowStdDev : 0
-    if (Math.abs(inflowZScore) > threshold) {
-      anomaly.netInflow = {
-        value: kline.netInflow,
-        zScore: inflowZScore,
-        direction: inflowZScore > 0 ? "high" : "low",
+    // 价格变化异常大但成交量不高
+    if (
+      priceChange > priceChangeMean + 2 * priceChangeStd &&
+      k.quoteVolume < volMean + 0.5 * volStd
+    ) {
+      const anomaly: Partial<Anomaly> = {
+        time: k.openTime,
+        priceVolumeMismatch: {
+          priceChange: priceChange * 100, // 转为百分比
+          volumeZScore: (k.quoteVolume - volMean) / (volStd || 1),
+        },
+        type: "high_price_change_low_volume",
       }
+      anomalies.push(anomaly as Anomaly)
     }
 
-    // Detect price-volume mismatch
-    if (Math.abs(kline.priceChangePct) > 1.0 && volumeZScore < 0) {
-      anomaly.priceVolumeMismatch = {
-        priceChange: kline.priceChangePct,
-        volumeZScore,
+    // 资金净流入异常大
+    if (k.netInflow > 0 && k.netInflow > 0.7 * k.quoteVolume) {
+      const anomaly: Partial<Anomaly> = {
+        time: k.openTime,
+        netInflow: {
+          value: k.netInflow,
+          zScore: 2.0, // 简化计算
+          direction: "high",
+        },
+        type: "extreme_net_inflow",
+        inflowRatio: k.quoteVolume > 0 ? k.netInflow / k.quoteVolume : 0,
       }
+      anomalies.push(anomaly as Anomaly)
     }
 
-    // If anomalies were found, add to list
-    if (Object.keys(anomaly).length > 0) {
-      anomalies.push({
-        ...anomaly,
-        time: kline.closeTime,
-      } as Anomaly)
+    // 资金净流出异常大
+    if (k.netInflow < 0 && Math.abs(k.netInflow) > 0.7 * k.quoteVolume) {
+      const anomaly: Partial<Anomaly> = {
+        time: k.openTime,
+        netInflow: {
+          value: k.netInflow,
+          zScore: -2.0, // 简化计算
+          direction: "low",
+        },
+        type: "extreme_net_outflow",
+        outflowRatio:
+          k.quoteVolume > 0 ? Math.abs(k.netInflow) / k.quoteVolume : 0,
+      }
+      anomalies.push(anomaly as Anomaly)
     }
-  })
+  }
 
-  // Return only the most recent 5 anomalies
   return {
     hasAnomalies: anomalies.length > 0,
-    anomalies: anomalies.slice(-5),
+    anomalies,
   }
 }
 
 /**
- * Analyze funding pressure
+ * 按照 Python 代码分析资金压力
  */
 export function analyzeFundingPressure(
   klinesData: Kline[],
@@ -243,41 +452,92 @@ export function analyzeFundingPressure(
     }
   }
 
-  // Get orderbook imbalance
-  const imbalance = orderbookStats.imbalance
+  // 按时间排序 (假设已排序)
+  const sortedData = [...klinesData]
 
-  // Get recent price changes
-  const recentKlines = klinesData.slice(-5)
-  const recentPriceChanges = recentKlines.map((k) => k.priceChangePct)
+  // 提取最近的资金流向数据 (最后10个周期)
+  const recentInflows = sortedData.slice(-10).map((k) => k.netInflow)
+  const recentVolumes = sortedData.slice(-10).map((k) => k.quoteVolume)
+
+  // 计算资金流向占成交量的比例
+  const inflowRatios: number[] = []
+  for (let i = 0; i < recentInflows.length; i++) {
+    const ratio = recentVolumes[i] > 0 ? recentInflows[i] / recentVolumes[i] : 0
+    inflowRatios.push(ratio)
+  }
+  const avgInflowRatio =
+    inflowRatios.reduce((sum, ratio) => sum + ratio, 0) / inflowRatios.length
+
+  // 结合订单簿数据
+  const volumeImbalance = orderbookStats.imbalance
+  const valueImbalance =
+    orderbookStats.bidPressure /
+      (orderbookStats.bidPressure + orderbookStats.askPressure) -
+    0.5
+
+  // 理想情况下计算近区域不平衡，但我们简化为使用整体不平衡
+  const nearVolumeImbalance = volumeImbalance
+
+  // 计算综合压力指标
+  const pressureScore =
+    avgInflowRatio * 0.4 +
+    volumeImbalance * 0.2 +
+    valueImbalance * 0.2 +
+    nearVolumeImbalance * 0.2
+
+  // 判断压力方向和强度
+  let pressure = "balanced"
+  let direction: FundingPressureAnalysis["pressureDirection"] = "neutral"
+  let strength = 0
+
+  if (pressureScore > 0.1) {
+    pressure = "buying"
+    direction = "upward"
+    strength = Math.min(pressureScore * 5, 1.0)
+
+    if (strength > 0.7) {
+      direction = "upward_strong"
+    }
+  } else if (pressureScore < -0.1) {
+    pressure = "selling"
+    direction = "downward"
+    strength = Math.min(Math.abs(pressureScore) * 5, 1.0)
+
+    if (strength > 0.7) {
+      direction = "downward_strong"
+    }
+  } else {
+    pressure = "balanced"
+    direction = "neutral"
+    strength = Math.abs(pressureScore) * 5
+  }
+
+  // 检查反转信号
+  const recentPriceChanges = sortedData.slice(-5).map((k) => k.priceChangePct)
   const avgPriceChange =
     recentPriceChanges.reduce((sum, change) => sum + change, 0) /
-      recentPriceChanges.length || 0
+    recentPriceChanges.length
 
-  // Determine pressure direction
-  let pressureDirection: FundingPressureAnalysis["pressureDirection"] =
-    "neutral"
-
-  if (imbalance > 0.2 && avgPriceChange > 0) {
-    pressureDirection = "upward_strong"
-  } else if (imbalance > 0.1 && avgPriceChange > 0) {
-    pressureDirection = "upward"
-  } else if (imbalance < -0.2 && avgPriceChange < 0) {
-    pressureDirection = "downward_strong"
-  } else if (imbalance < -0.1 && avgPriceChange < 0) {
-    pressureDirection = "downward"
-  } else if (imbalance > 0.1 && avgPriceChange < 0) {
-    pressureDirection = "potential_reversal_up"
-  } else if (imbalance < -0.1 && avgPriceChange > 0) {
-    pressureDirection = "potential_reversal_down"
+  // 价格下跌但买压力大，可能向上反转
+  if (avgPriceChange < -1.0 && volumeImbalance > 0.1) {
+    direction = "potential_reversal_up"
   }
-
-  // Calculate confidence
-  const confidence = Math.min(Math.abs(imbalance) * 2, 1.0)
+  // 价格上涨但卖压力大，可能向下反转
+  else if (avgPriceChange > 1.0 && volumeImbalance < -0.1) {
+    direction = "potential_reversal_down"
+  }
 
   return {
-    pressureDirection,
-    confidence,
-    imbalance,
+    pressureDirection: direction,
+    confidence: strength,
+    imbalance: volumeImbalance,
     bidAskRatio: orderbookStats.pressureRatio,
-  }
+    metrics: {
+      avgInflowRatio,
+      volumeImbalance,
+      valueImbalance,
+      nearVolumeImbalance,
+      pressureScore,
+    },
+  } as FundingPressureAnalysis
 }

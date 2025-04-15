@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { AnalysisResult, Interval, SymbolAnalysis } from "@/types/funding-flow"
+import { AnalysisResult, Interval } from "@/types/funding-flow"
 import { formatNumber } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -40,17 +40,17 @@ export function AnalysisResults({ results }: AnalysisResultsProps) {
   const formatTimeInterval = (interval: Interval) => {
     switch (interval) {
       case "5m":
-        return "5分钟"
+        return "5 分钟"
       case "15m":
-        return "15分钟"
+        return "15 分钟"
       case "30m":
-        return "30分钟"
+        return "30 分钟"
       case "1h":
-        return "1小时"
+        return "1 小时"
       case "4h":
-        return "4小时"
+        return "4 小时"
       case "1d":
-        return "1天"
+        return "1 天"
       default:
         return interval
     }

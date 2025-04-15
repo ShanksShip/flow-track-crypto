@@ -98,22 +98,13 @@ export async function getKlinesData(
       const volume = parseFloat(kline[5])
       const quoteVolume = parseFloat(kline[7])
 
-      // Simple estimation of buy/sell volume based on price action
-      let buyVolume: number
-      let sellVolume: number
+      // 直接从API响应中获取taker买入成交量，与Python代码一致
+      const takerBuyBaseVolume = parseFloat(kline[9])
+      const takerBuyQuoteVolume = parseFloat(kline[10])
 
-      if (closePrice >= openPrice) {
-        // Bullish candle, assume 60% is buying
-        buyVolume = volume * 0.6
-        sellVolume = volume * 0.4
-      } else {
-        // Bearish candle, assume 40% is buying
-        buyVolume = volume * 0.4
-        sellVolume = volume * 0.6
-      }
-
-      // Calculate net inflow (approximation)
-      const netInflow = (buyVolume - sellVolume) * closePrice
+      // 按照Python代码计算资金净流入: 买方成交量 - 卖方成交量
+      const netInflow =
+        takerBuyQuoteVolume - (quoteVolume - takerBuyQuoteVolume)
 
       // Calculate price change percentage
       const priceChangePct = ((closePrice - openPrice) / openPrice) * 100
@@ -127,8 +118,10 @@ export async function getKlinesData(
         close: closePrice,
         volume,
         quoteVolume,
-        buyVolume,
-        sellVolume,
+        buyVolume: takerBuyBaseVolume,
+        sellVolume: volume - takerBuyBaseVolume,
+        takerBuyBaseVolume,
+        takerBuyQuoteVolume,
         netInflow,
         priceChangePct,
       }
