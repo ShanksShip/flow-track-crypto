@@ -24,7 +24,7 @@ import { AnalysisResults } from "@/components/analysis-results"
 export function FundingFlowAnalyzer() {
   const [symbols, setSymbols] = useState<string[]>(["BTCUSDT", "ETHUSDT"])
   const [newSymbol, setNewSymbol] = useState<string>("")
-  const [interval, setInterval] = useState<Interval>("5m")
+  const [interval, setInterval] = useState<Interval>("1h")
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [analysisResults, setAnalysisResults] = useState<any | null>(null)
